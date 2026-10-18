@@ -1,96 +1,74 @@
-# ROBOGUARD(8) -- Industrial IoT Subsystem Manual
+# RoboGuard DX // Enterprise Diagnostic Terminal & Intelligent Industry Co-pilot
 
-## NAME
-**roboguard** — Deep Learning Telemetry Anomaly Detection and AI Technician Co-Pilot Daemon
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://roboguard-dx-dcwmz85en4n63ycqgyukfu.streamlit.app/)
+[![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=for-the-badge&logo=python)](https://www.python.org/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-## SYNOPSIS
+> **Live Demo App:** [Try RoboGuard DX Live Here](https://roboguard-dx-dcwmz85en4n63ycqgyukfu.streamlit.app/)
+
+---
+
+## Overview
+**RoboGuard DX** is an AI-powered smart industrial diagnostic terminal designed to monitor, detect, and intervene in factory machine health in real-time. Inspired by professional automotive diagnostic standards (such as ECU standards and *Freeze Frame*), the system bridges multi-point telemetry data with artificial intelligence (*LSTM Autoencoder*) to minimize downtime and Mean Time To Repair (MTTR).
+
+---
+
+## Core Features
+
+1. **Live Telemetry & Custom Metric Builder**
+   - Real-time monitoring across subsystems (Thermal, Kinematic, Mechanical, Hydraulic, Electrical).
+   - Instant custom sensor addition via GUI with automatic vector dimension adjustment.
+
+2. **Universal Active Testing**
+   - Direct intervention panel for technicians (controlling Cooling Pump, Pressure Relief, RPM Limiter).
+   - Real-time write-back that interactively dampens sensor values and oscilloscope charts without triggering false-positive anomaly alarms.
+
+3. **LSTM Autoencoder AI Engine**
+   - Multivariate sequential analysis using Mean Squared Error (MSE) reconstruction for early anomaly deviation detection.
+
+4. **ECU Freeze Frame (Black Box Memory)**
+   - Automatic 10-second flight recorder capturing data when a critical anomaly is detected, complete with Diagnostic Trouble Codes (DTC) and repair guidelines.
+
+---
+
+## Local Installation & Running
+
+If you wish to run this project locally on your machine:
+
 ```bash
-python3 -m venv venv
+# 1. Clone repository
+git clone [https://github.com/zerghirsaw/roboguard-dx.git](https://github.com/zerghirsaw/roboguard-dx.git)
+cd roboguard-dx
+
+# 2. Create and activate a virtual environment (Optional but recommended)
+python -m venv venv
+# Windows:
+venv\Scripts\activate
+# Mac/Linux:
 source venv/bin/activate
+
+# 3. Install dependencies
 pip install -r requirements.txt
+
+# 4. Run the Streamlit application
 streamlit run app.py
-```
 
-## DESCRIPTION
-**RoboGuard** is a modular, edge-capable industrial monitoring subsystem engineered for robotic spare parts manufacturing plants. It executes real-time multivariate time-series analysis on high-frequency machine telemetry using a PyTorch-backed Long Short-Term Memory (LSTM) Autoencoder. 
+Project Structure
 
-Upon detecting statistical reconstruction drift or temporal anomalies, the system engages an explainable AI (XAI) technician co-pilot daemon powered by local large language models (IBM Granite via Ollama) with automated industrial fallback protocols to minimize Mean Time To Repair (MTTR).
+    app.py — Main entry point for the Streamlit user interface.
 
----
+    anomaly_detector.py — AI engine based on LSTM Autoencoder & anomaly cooldown management.
 
-## ARCHITECTURE & SUBSYSTEM SPECIFICATION
+    sensor_simulator.py — Multi-point telemetry data generator & active testing handler.
 
-The subsystem follows a strict decoupled, modular architecture residing within the workspace root:
+    stream_receiver.py — Multi-protocol stream data ingestion handler.
 
-```text
-roboguard/
-├── app.py                  # Control room frontend daemon (Streamlit + Altair)
-├── anomaly_detector.py     # PyTorch LSTM Autoencoder & normalization pipeline
-├── copilot_engine.py       # AI diagnostic connector (Ollama / IBM Granite)
-├── sensor_simulator.py     # Multivariate 6D industrial telemetry simulator
-└── requirements.txt        # Pinned runtime dependencies
-```
+    requirements.txt — Lightweight dependencies list (streamlit, pandas, numpy, altair).
 
-### 1. Telemetry Ingestion Layer (`sensor_simulator.py`)
-Generates high-frequency, multivariate industrial streams across 6 canonical feature dimensions at adjustable temporal intervals:
-* **Vibration RMS (`vibration`):** Measured in $\text{mm/s}$ (Normal baseline: $1.8 \pm 0.2$).
-* **Component Temperature (`temperature`):** Measured in $\text{°C}$ (Normal baseline: $50.0 \pm 1.0$).
-* **Electrical Current (`current`):** Measured in $\text{Amperes}$ (Normal baseline: $2.5 \pm 0.1$).
-* **Hydraulic Pressure (`pressure`):** Measured in $\text{Bar}$ (Normal baseline: $45.0 \pm 1.0$).
-* **Motor Speed (`rpm`):** Measured in $\text{RPM}$ (Normal baseline: $1450.0 \pm 10.0$).
-* **Acoustic Noise (`acoustic`):** Measured in $\text{dB}$ (Normal baseline: $55.0 \pm 1.0$).
+License
 
-### 2. Deep Learning Anomaly Detection Core (`anomaly_detector.py`)
-* **Model Topology:** Unsupervised LSTM Autoencoder (`LSTMAutoencoder`) comprising an encoder LSTM cell, temporal latent state projection, and a decoder reconstruction layer.
-* **Feature Normalization:** Multi-dimensional scaling vector (`scale_factors`) normalizes disparate telemetry units into a stable $[0, 1]$ numerical manifold prior to tensor conversion.
-* **Inference Logic:** Evaluates sliding sequence windows of length $T = 10$. Computes Mean Squared Error (MSE) reconstruction loss:
-  $$\mathcal{L}_{\text{MSE}} = \frac{1}{N} \sum_{t=1}^{N} \|\mathbf{x}_t - \hat{\mathbf{x}}_t\|^2$$
-* **Thresholding:** Triggers an critical state interrupt flag when $\mathcal{L}_{\text{MSE}} > 0.03$.
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0) - see the LICENSE file for details.
 
-### 3. Explainable AI & Co-Pilot Engine (`copilot_engine.py`)
-* **Primary Interface:** Connects to local daemon endpoints (`http://localhost:11434/api/generate`) running **IBM Granite** (`granite3.0:3b`) with a 3-second strict timeout constraint.
-* **Fail-Safe Mechanism:** Automatically switches to an enterprise rule-based fallback dictionary if local inference latency exceeds constraints or daemon offline status is detected, ensuring 100% uptime reliability during live demonstrations.
+Developed by Muhammad Rifat Qolby Almusawa
 
-### 4. Control Room Presentation Layer (`app.py`)
-* Built on **Streamlit** with responsive grid metrics (`st.metric`) and real-time multi-sensor vector visualization powered by **Altair** (`alt.Chart`), configured with horizontal timestamp axes (`labelAngle=0`) to prevent visual crowding.
-* Supports runtime localization toggles (`Indonesia` / `English`).
-
----
-
-## DEPENDENCIES & ENVIRONMENT SETUP
-
-The runtime environment requires Python 3.10+ and the packages specified in `requirements.txt`:
-
-```text
-streamlit>=1.35.0
-torch>=2.0.0
-numpy>=1.24.0
-pandas>=2.0.0
-altair>=5.0.0
-requests>=2.31.0
-```
-
-To export the active environment configuration manually:
-```bash
-pip freeze > requirements.txt
-```
-
----
-
-## DEPLOYMENT & OPERATION
-
-### Local Execution
-1. Initialize virtual environment and activate shell.
-2. Execute the frontend dashboard daemon:
-   ```bash
-   streamlit run app.py
-   ```
-3. Access the control room interface locally at `http://localhost:8501`.
-
-### Production & Cloud Distribution
-For cloud deployment (Hugging Face Spaces or Streamlit Community Cloud):
-1. Push repository root containing `app.py`, modules, and `requirements.txt` to a remote public repository.
-2. Link repository to the target cloud container runner. The runtime executes `app.py` as the entrypoint, automatically falling back to structured diagnostic protocols if hardware accelerators or local LLM daemons are absent.
-
-## AUTHOR
-RoboGuard Engineering Task Force (Intelligent Industry Track).
+Built for Intelligent Industry Solutions.
